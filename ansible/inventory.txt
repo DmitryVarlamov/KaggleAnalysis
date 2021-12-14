@@ -1,0 +1,2 @@
+[elk_hosts]
+elk1 ansible_host=167.99.143.159 ansible_ssh_pass=*** ansible_user=ansible ansible_python_interpreter=/usr/bin/python3

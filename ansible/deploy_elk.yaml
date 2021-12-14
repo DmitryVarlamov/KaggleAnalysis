@@ -1,0 +1,156 @@
+---
+- name: Verify that Docker is installed and install if not
+  hosts: elk_hosts
+  become: yes
+  vars:
+    ansible_python_interpreter: /usr/bin/python
+  tasks:
+    - name: Get service facts
+      service_facts:
+    - name: Remove previous docker if installed from CentOS repo
+      when: ansible_facts.services["docker.service"] is not defined
+      yum:
+        name:
+          - docker
+          - docker-client
+          - docker-client-latest
+          - docker-common
+          - docker-latest
+          - docker-latest-logrotate      
+          - docker-logrotate
+          - docker-engine
+        state: removed
+    - name: Install yum utils
+      when: ansible_facts.services["docker.service"] is not defined
+      yum:
+        name: yum-utils
+        state: latest
+    - name: Install the device-mapper-persistent-data package
+      when: ansible_facts.services["docker.service"] is not defined
+      yum:
+        name: device-mapper-persistent-data
+        state: latest
+    - name: Install the lvm2 package
+      when: ansible_facts.services["docker.service"] is not defined
+      yum:
+        name: lvm2
+        state: latest
+    - name: Add the Docker repo
+      when: ansible_facts.services["docker.service"] is not defined
+      yum_repository:
+        name: docker-ce
+        description: Docker CE Repo
+        file: docker-ce
+        baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+        enabled: yes
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/centos/gpg
+    - name: Install the Docker packages
+      when: ansible_facts.services["docker.service"] is not defined
+      yum:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: latest
+    - name: Start and Enable Docker service
+      when: ansible_facts.services["docker.service"] is not defined
+      service:
+        name: docker
+        state: started
+        enabled: yes
+    - name: Start and Enable Container service
+      when: ansible_facts.services["docker.service"] is not defined
+      service:
+        name: containerd
+        state: started
+        enabled: yes
+    - name: Install python3
+      yum:
+        name: python3
+        state: latest
+    - name: Install docker library for python3
+      pip:
+        name: docker
+        executable: pip3
+    - name: Install selinux library for python3
+      pip:
+        name: selinux
+        executable: pip3
+
+- name: Deploy container with Elasticsearch
+  hosts: elk_hosts
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: Pull docker image
+    docker_image:
+      name: elasticsearch:7.14.0
+      source: pull
+  - name: Create docker net
+    docker_network:
+      name: elk
+  - name: Start docker containet with Elasticsearch
+    docker_container:
+      name: elasticsearch
+      ports:
+      - "9200:9200"
+      - "9300:9300"
+      image: elasticsearch:7.14.0
+      state: started
+      env:
+        discovery.type: single-node
+      networks:
+      - name: elk
+
+- name: Deploy container with Kibana
+  hosts: elk_hosts
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: Pull docker image
+    docker_image:
+      name: kibana:7.14.0
+      source: pull
+  - name: Start docker containet with Kibana
+    docker_container:
+      name: kibana
+      ports:
+      - "5601:5601"
+      image: kibana:7.14.0
+      state: started
+      env:
+        ELASTICSEARCH_HOSTS: http://167.99.143.159:9200
+      networks:
+      - name: elk
+
+- name: Deploy container with Logstash
+  hosts: elk_hosts
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: Pull docker image
+    docker_image:
+      name: logstash:7.14.0
+      source: pull
+  - name: Create /etc/pipeline directory
+    file:
+      path: /etc/pipeline
+      state: directory
+      mode: '0755'
+  - name: Copy pipeline file to directory
+    copy:
+      src: kaggle.conf
+      dest: /etc/pipeline/kaggle.conf
+  - name: Start docker containet with Logstash
+    docker_container:
+      name: logstash
+      ports:
+      - "9600:9600"
+      - "5045:5045"
+      image: logstash:7.14.0
+      state: started
+      volumes:
+      - /etc/pipeline/:/usr/share/logstash/pipeline/
+      networks:
+      - name: elk
