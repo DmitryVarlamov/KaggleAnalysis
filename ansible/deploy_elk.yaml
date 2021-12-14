@@ -140,7 +140,7 @@
       mode: '0755'
   - name: Copy pipeline file to directory
     copy:
-      src: kaggle.conf
+      src: ./pipelines/kaggle.conf
       dest: /etc/pipeline/kaggle.conf
   - name: Start docker containet with Logstash
     docker_container:
