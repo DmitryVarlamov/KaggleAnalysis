@@ -14,6 +14,6 @@ This is the list of steps you need to make in order to deploy ELK stack on your 
 
 4. Launch playbook with "ansible-playbook -i inventory.txt deploy_elk.yaml" command
 
-5. If you want to use already created present of dashboards, then after the cluster is deployed go to <your_ip>:5601/app/management/kibana/objects endpoint and click "import". Then choose "kibana_export.ndjson" file that is located in "exports" folder of this repository.
+5. If you want to use already created preset of dashboards, then after the cluster is deployed go to <your_ip>:5601/app/management/kibana/objects endpoint and click "import". Then choose "kibana_export.ndjson" file that is located in "exports" folder of this repository.
 
 6. To upload new data to elasticsearch, launch connector script with "python kaggle_api.py" command
